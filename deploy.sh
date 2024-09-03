@@ -1,0 +1,1 @@
+near deploy $1 releases/$2_release.wasm --account_id=$1

@@ -1,0 +1,1 @@
+near delete $1 $MASTER --account_id=$1 || true

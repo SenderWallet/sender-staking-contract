@@ -1,0 +1,1 @@
+near create-account $1 --masterAccount $MASTER --initialBalance 10 --accountId $OWNER || true
