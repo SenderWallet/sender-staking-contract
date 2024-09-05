@@ -20,6 +20,7 @@ mod user;
 mod utils;
 mod view;
 mod ft_token_receiver;
+mod migrations;
 
 pub use crate::errors::*;
 pub use crate::events::*;
@@ -78,9 +79,20 @@ pub struct Contract {
     pub fixed_switch: bool,
     pub fixed_term_apr: u32,
 
-    pub total_current_staked_amount: Balance,
-    pub total_fixed_staked_amount: Balance,
+    // current
     pub current_withdraw_delay: u32,
+    pub acc_current_staked_amount: Balance,
+    pub total_current_staked_amount: Balance,
+
+    pub total_current_unstaked_amount: Balance,
+    pub total_current_unstaked_interest: Balance,
+
+    // fixed
+    pub acc_fixed_staked_amount: Balance,
+    pub total_fixed_staked_amount: Balance,
+    pub total_fixed_unstaked_amount: Balance,
+    pub total_fixed_unstaked_interest: Balance,
+    
 }
 
 
@@ -97,9 +109,19 @@ impl Contract {
             current_term_apr: DEFAULT_CURRENT_TERM_APR,
             fixed_switch: true,
             fixed_term_apr: DEFAULT_FIXED_TERM_APR,
-            total_current_staked_amount: 0,
-            total_fixed_staked_amount: 0,
             current_withdraw_delay: DEFAULT_WITHDRAW_DAYS,
+
+            // current
+            acc_current_staked_amount: 0,
+            total_current_staked_amount: 0,
+            total_current_unstaked_amount: 0,
+            total_current_unstaked_interest: 0,
+
+            // fixed
+            acc_fixed_staked_amount: 0,
+            total_fixed_staked_amount: 0,
+            total_fixed_unstaked_amount: 0,
+            total_fixed_unstaked_interest: 0,
         }
     }
 
@@ -113,8 +135,9 @@ impl Contract {
         let interest = (user.current_deposit.amount*delta_time as u128 *(self.current_term_apr as u128)/(TERM_APR_DEMONINATOR as u128))/(365*ONE_DAY_IN_SECS) as u128;
 
         let unstake_amount = user.current_deposit.amount;
+        let unstake_interest = user.current_deposit.accrued_interest + interest;
         user.withdrawable_amount += user.current_deposit.amount;
-        user.withdrawable_amount += user.current_deposit.accrued_interest + interest;
+        user.withdrawable_amount += unstake_interest;
 
         user.current_deposit.amount = 0;
         user.current_deposit.accrued_interest = 0;
@@ -122,6 +145,9 @@ impl Contract {
 
         require!(self.total_current_staked_amount >= unstake_amount,"Unstake amount is greater than total_current_staked_amount" );
         self.total_current_staked_amount -= unstake_amount;
+
+        self.total_current_unstaked_amount += unstake_amount;
+        self.total_current_unstaked_interest += unstake_interest;
         self.internal_set_user(&predecessor_id,user);
 
         Event::Unstake { 
@@ -201,12 +227,14 @@ impl Contract{
         let interest = (user.current_deposit.amount*delta_time as u128 *(self.current_term_apr as u128)/(TERM_APR_DEMONINATOR as u128))/(365*ONE_DAY_IN_SECS) as u128;
         // update accrued interest
         user.current_deposit.accrued_interest += interest;
-        // update last_stake_time
-        user.current_deposit.last_stake_time = timestamp;
         // update stake amount
         user.current_deposit.amount += amount;
+        // update last_stake_time
+        user.current_deposit.last_stake_time = timestamp;
+        
         // update total_current_staked_amount
         self.total_current_staked_amount += amount;
+        self.acc_current_staked_amount += amount;
 
         self.internal_set_user(&sender_id,user);
         Event::Stake { 

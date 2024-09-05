@@ -12,8 +12,19 @@ pub struct Metadata {
     pub fixed_switch: bool,
     pub fixed_term_apr: u32,
 
+    // current
+    pub current_withdraw_delay: u32,
+    pub acc_current_staked_amount: U128,
     pub total_current_staked_amount: U128,
+
+    pub total_current_unstaked_amount: U128,
+    pub total_current_unstaked_interest: U128,
+
+    // fixed
+    pub acc_fixed_staked_amount: U128,
     pub total_fixed_staked_amount: U128,
+    pub total_fixed_unstaked_amount: U128,
+    pub total_fixed_unstaked_interest: U128,
 }
 
 #[near_bindgen]
@@ -28,8 +39,15 @@ impl Contract {
             current_term_apr: self.current_term_apr,
             fixed_switch: self.fixed_switch,
             fixed_term_apr: self.fixed_term_apr,
+            current_withdraw_delay: self.current_withdraw_delay,
+            acc_current_staked_amount: U128(self.acc_current_staked_amount),
             total_current_staked_amount: U128(self.total_current_staked_amount),
+            total_current_unstaked_amount: U128(self.total_current_unstaked_amount),
+            total_current_unstaked_interest: U128(self.total_current_unstaked_interest),
+            acc_fixed_staked_amount: U128(self.acc_fixed_staked_amount),
             total_fixed_staked_amount: U128(self.total_fixed_staked_amount),
+            total_fixed_unstaked_amount: U128(self.total_fixed_unstaked_amount),
+            total_fixed_unstaked_interest: U128(self.total_fixed_unstaked_interest),
         }
     }
 

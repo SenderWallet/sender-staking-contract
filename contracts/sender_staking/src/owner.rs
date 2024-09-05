@@ -41,18 +41,6 @@ impl Contract {
         self.current_withdraw_delay = delay_in_days;
     }
 
-    /// Should only be called by this contract on migration.
-    /// This is NOOP implementation. KEEP IT if you haven't changed contract state.
-    /// If you have, you need to implement migration from old state 
-    /// (keep the old struct with different name to deserialize it first).
-    /// After migration goes live, revert back to this implementation for next updates.
-    #[init(ignore_state)]
-    #[private]
-    pub fn migrate() -> Self {
-        let contract: Contract = env::state_read().expect("ERR_NOT_INIT");
-        contract
-    }
-
 }
 
 
