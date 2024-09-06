@@ -1,7 +1,7 @@
 use near_sdk::{
     AccountId, log,
-    serde::{Serialize},
-    serde_json::{json},
+    serde::Serialize,
+    serde_json::json,
     json_types::U128,
 };
 
@@ -63,6 +63,7 @@ mod tests {
     use super::*;
     use near_sdk::{test_utils, AccountId};
 
+    #[warn(deprecated)]
     fn alice() -> AccountId {
         AccountId::new_unvalidated("alice".to_string())
     }
@@ -70,7 +71,6 @@ mod tests {
     #[test]
     fn stake() {
         let caller_id = &alice();
-        let token_id = &"1".to_string();
         let stake_type = &"current_deposit".to_string();
         let amount = &U128(10000000000);
         let duration = 30;

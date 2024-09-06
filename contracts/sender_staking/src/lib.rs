@@ -1,5 +1,5 @@
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
-use near_sdk::collections::{LookupMap, UnorderedMap, UnorderedSet, LookupSet};
+use near_sdk::collections::UnorderedMap;
 use near_sdk::json_types::U128;
 use near_sdk::serde::{Deserialize, Serialize};
 use near_sdk::{
@@ -7,13 +7,11 @@ use near_sdk::{
     BorshStorageKey, PanicOnDefault, Promise, PromiseOrValue, PromiseResult
 };
 use near_contract_standards::fungible_token::Balance;
-use near_contract_standards::fungible_token::core::ext_ft_core;
-use std::collections::HashMap;
+
 use serde_json::json;
 
 use near_gas::NearGas;
 
-mod errors;
 mod events;
 mod owner;
 mod user;
@@ -22,13 +20,11 @@ mod view;
 mod ft_token_receiver;
 mod migrations;
 
-pub use crate::errors::*;
 pub use crate::events::*;
 pub use crate::user::*;
 pub use crate::utils::*;
 pub use crate::ft_token_receiver::*;
 
-pub const STORAGE_DEPOSIT_AMOUNT: Balance = 1250000000000000000000;
 pub const ONE_YOCTO_NEAR: Balance = 1;
 
 pub const TGAS: u64 = 1_000_000_000_000;
@@ -40,23 +36,18 @@ pub const YOCTO8: u128 = 100_000_000;
 pub const YOCTO18: u128 = 1_000_000_000_000_000_000;
 pub const YOCTO24: u128 = 1_000_000_000_000_000_000_000_000;
 
-pub const ONE_DAY_IN_SECS: u64 = 24 * 60 * 60; // NOTICE: RESTORE 
-pub const DEFAULT_DURATION_SEC: u64 = 60 * 60;
-pub const MAX_DURATION_SEC: u64 = 72 * 60 * 60;
+pub const ONE_DAY_IN_SECS: u64 = 24 * 60 * 60; 
 
 pub const TERM_APR_DEMONINATOR: u32 = 10000;
-pub const DEFAULT_FIXED_TERM_APR: u32 = 6000; 
-pub const DEFAULT_CURRENT_TERM_APR: u32 = 3200;
-pub const DEFAULT_WITHDRAW_DAYS: u32 = 21;
-
-
-pub type TimeStampSec = u64;
+pub const DEFAULT_FIXED_TERM_APR: u32 = 6000;   // divided by 10000
+pub const DEFAULT_CURRENT_TERM_APR: u32 = 3200; // divided by 10000
+pub const DEFAULT_WITHDRAW_DAYS: u32 = 21; // days
 
 
 // external contract interface for callback
 #[ext_contract(ext_self)]
 pub trait MyContract {
-    fn on_transfer_complete(&mut self, receiver_id: AccountId, amount: u128, time: u64);
+    fn on_transfer_complete(&mut self, receiver_id: AccountId, amount: u128, time: u64, last_unstake_time: u64);
 }
 
 #[derive(BorshStorageKey, BorshSerialize)]
@@ -160,8 +151,8 @@ impl Contract {
 
     pub fn unstake_fixed(&mut self) {
         let predecessor_id = env::predecessor_account_id();
-        let mut user: User = self.internal_unwrap_user_or_default(&predecessor_id);
-        require!(user.current_deposit.amount > 0, "No current deposit to unstake" );
+        let user: User = self.internal_unwrap_user_or_default(&predecessor_id);
+        require!(user.current_deposit.amount > 0, "No fixed deposit to unstake" );
         let timestamp = nano_to_sec(env::block_timestamp());
         let delta_time = timestamp - user.current_deposit.last_stake_time;
 
@@ -170,19 +161,25 @@ impl Contract {
     #[payable]
     pub fn withdraw(&mut self) -> Promise {
         let predecessor_id = env::predecessor_account_id();
-        let user: User = self.internal_unwrap_user_or_default(&predecessor_id);
+        let mut user: User = self.internal_unwrap_user_or_default(&predecessor_id);
         let timestamp = nano_to_sec(env::block_timestamp());
         
         require!(user.withdrawable_amount > 0, "The withdrawable amount is zero" );
         require!(user.current_deposit.last_unstake_time > 0, "need to unstake" );
         let msg = format!("need to wait for {} days", self.current_withdraw_delay);
         require!(timestamp > (user.current_deposit.last_unstake_time + ONE_DAY_IN_SECS * self.current_withdraw_delay as u64), msg);
+        
+        let withdraw_amount = user.withdrawable_amount;
+        let last_unstake_time = user.current_deposit.last_unstake_time;
+        user.withdrawable_amount = 0;
+        user.current_deposit.last_unstake_time = 0; // reset last_unstake_time to 0 after withdraw
+        self.internal_set_user(&predecessor_id,user);
 
         let transfer_promise = Promise::new(self.token_account_id.clone()).function_call(
             "ft_transfer".to_string(),
             json!({
                 "receiver_id": predecessor_id.clone(),
-                "amount": U128(user.withdrawable_amount),
+                "amount": U128(withdraw_amount.clone()),
             }).to_string().into_bytes(),
             NearToken::from_yoctonear(ONE_YOCTO_NEAR),
             Gas::from_gas(GAS_FOR_TRANSFER.as_gas())
@@ -191,22 +188,24 @@ impl Contract {
         return transfer_promise.then(
             Self::ext(env::current_account_id())
             .with_static_gas(Gas::from_tgas(20))
-            .on_transfer_complete(predecessor_id.clone(), U128(user.withdrawable_amount), timestamp)
+            .on_transfer_complete(predecessor_id.clone(), U128(withdraw_amount), timestamp, last_unstake_time)
         );
 
     }  
 
     #[private]
-    pub fn on_transfer_complete(&mut self, receiver_id: AccountId, amount: U128, timestamp: u64) {
+    pub fn on_transfer_complete(&mut self, receiver_id: AccountId, amount: U128, timestamp: u64, last_unstake_time: u64) {
         // check the result of promise
         match env::promise_result(0) {
-            PromiseResult::Failed => env::panic_str("Transfer failed."),
-            PromiseResult::Successful(_result) => {
+            PromiseResult::Failed => {
                 let mut user: User = self.internal_unwrap_user_or_default(&receiver_id);
-                user.withdrawable_amount = 0;
-                user.current_deposit.last_unstake_time = 0; // reset last_unstake_time to 0 after withdraw
+                user.withdrawable_amount = amount.0; // restore withdrawable_amount if failed
+                user.current_deposit.last_unstake_time = last_unstake_time; // restore last_unstake_time if failed
                 self.internal_set_user(&receiver_id, user);
-        
+                log!("Transfer failed.")
+            },
+            PromiseResult::Successful(_result) => {
+                // emit withdraw event
                 Event::Withdraw { 
                     user_id: &receiver_id.clone(), 
                     amount: &amount,
@@ -247,7 +246,7 @@ impl Contract{
     }
 
     pub fn stake_fixed(&mut self, sender_id: AccountId, amount: Balance, duration: u32) {
-        let mut user: User = self.internal_unwrap_user_or_default(&sender_id);
+        let user: User = self.internal_unwrap_user_or_default(&sender_id);
 
         let timestamp = nano_to_sec(env::block_timestamp());
         //log!("timestamp = {:#?}", timestamp);

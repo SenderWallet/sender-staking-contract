@@ -20,15 +20,13 @@ impl FungibleTokenReceiver for Contract {
         let info: TransferCallInfo = serde_json::from_str::<TransferCallInfo>(&msg).expect("invalid msg");
         let mut refund = 0;
         match info {
-            TransferCallInfo::StakeInfo{staking_type, duration} => {
+            TransferCallInfo::StakeInfo{staking_type, duration:_} => {
                 if staking_type == "current_deposit".to_string() && self.current_switch == true {
                     self.stake_current(sender_id, amount.0);
                 }
-                else if staking_type == "fixed_deposit".to_string()  && self.fixed_switch == true {
-                    self.stake_fixed(sender_id, amount.0, duration.unwrap());
-                }
                 else{
                     refund = amount.0;
+                    log!("unsupported staking type");
                 }
             },
 

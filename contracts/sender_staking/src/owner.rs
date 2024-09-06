@@ -46,7 +46,6 @@ impl Contract {
 
 #[cfg(target_arch = "wasm32")]
 mod upgrade {
-    use near_sdk::Gas;
     //use near_gas::*;
     use near_sys as sys;
 
