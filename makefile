@@ -2,8 +2,9 @@ RFLAGS="-C link-arg=-s"
 
 build: sender_staking mock_ft
 
-release:
-	$(call docker_build)
+release: contracts/sender_staking
+	rustup target add wasm32-unknown-unknown
+	cargo build -p sender_staking --target wasm32-unknown-unknown --release
 ifeq ($(OS), Windows_NT)
 	mkdir res
 	copy target\wasm32-unknown-unknown\release\sender_staking.wasm res\sender_staking_release.wasm
