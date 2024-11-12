@@ -1,8 +1,8 @@
 #/bin/bash
 pushd $(dirname $0) > /dev/null
 
-ORIG=releases/dcl_release.wasm
-DEST=res/dcl_release.wasm
+ORIG=releases/sender_staking_release.wasm
+DEST=res/sender_staking_release.wasm
 
 echo "aaa" | openssl dgst -sha256 -binary > /dev/null 2>&1
 C1=$?
