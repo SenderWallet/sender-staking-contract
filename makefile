@@ -59,5 +59,5 @@ define docker_build
 		-w /host \
 		-e RUSTFLAGS=$(RFLAGS) \
 		-i -t my-contract-builder \
-		cargo build -p dailysignin --target wasm32-unknown-unknown --release
+		cargo build -p sender_staking --target wasm32-unknown-unknown --release
 endef
