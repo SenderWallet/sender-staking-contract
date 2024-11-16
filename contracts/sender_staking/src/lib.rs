@@ -199,8 +199,10 @@ impl Contract {
         match env::promise_result(0) {
             PromiseResult::Failed => {
                 let mut user: User = self.internal_unwrap_user_or_default(&receiver_id);
-                user.withdrawable_amount = amount.0; // restore withdrawable_amount if failed
-                user.current_deposit.last_unstake_time = last_unstake_time; // restore last_unstake_time if failed
+                user.withdrawable_amount += amount.0; // restore withdrawable_amount if failed
+                if user.current_deposit.last_unstake_time == 0 {
+                    user.current_deposit.last_unstake_time = last_unstake_time; // restore last_unstake_time if failed
+                }
                 self.internal_set_user(&receiver_id, user);
                 log!("Transfer failed.")
             },
