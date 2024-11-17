@@ -78,11 +78,6 @@ pub struct Contract {
     pub total_current_unstaked_amount: Balance,
     pub total_current_unstaked_interest: Balance,
 
-    // fixed
-    pub acc_fixed_staked_amount: Balance,
-    pub total_fixed_staked_amount: Balance,
-    pub total_fixed_unstaked_amount: Balance,
-    pub total_fixed_unstaked_interest: Balance,
     
 }
 
@@ -108,11 +103,6 @@ impl Contract {
             total_current_unstaked_amount: 0,
             total_current_unstaked_interest: 0,
 
-            // fixed
-            acc_fixed_staked_amount: 0,
-            total_fixed_staked_amount: 0,
-            total_fixed_unstaked_amount: 0,
-            total_fixed_unstaked_interest: 0,
         }
     }
 
@@ -147,15 +137,6 @@ impl Contract {
             amount: &U128(unstake_amount),
             time: timestamp
         }.emit();
-    }
-
-    pub fn unstake_fixed(&mut self) {
-        let predecessor_id = env::predecessor_account_id();
-        let user: User = self.internal_unwrap_user_or_default(&predecessor_id);
-        require!(user.current_deposit.amount > 0, "No fixed deposit to unstake" );
-        let timestamp = nano_to_sec(env::block_timestamp());
-        let delta_time = timestamp - user.current_deposit.last_stake_time;
-
     }
 
     #[payable]
@@ -247,21 +228,6 @@ impl Contract{
         }.emit(); 
     }
 
-    pub fn stake_fixed(&mut self, sender_id: AccountId, amount: Balance, duration: u32) {
-        let user: User = self.internal_unwrap_user_or_default(&sender_id);
-
-        let timestamp = nano_to_sec(env::block_timestamp());
-        //log!("timestamp = {:#?}", timestamp);
-
-        Event::Stake { 
-            user_id: &sender_id.clone(), 
-            stake_type: &"fixed_deposit".to_string(),
-            amount: &U128(amount),
-            duration: duration,
-            time: timestamp
-        }.emit(); 
- 
-    }
 }
 
 #[cfg(all(test, not(target_arch = "wasm32")))]

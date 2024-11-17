@@ -30,11 +30,6 @@ struct OldState {
     pub total_current_unstaked_amount: Balance,
     pub total_current_unstaked_interest: Balance,
 
-    // fixed
-    pub acc_fixed_staked_amount: Balance,
-    pub total_fixed_staked_amount: Balance,
-    pub total_fixed_unstaked_amount: Balance,
-    pub total_fixed_unstaked_interest: Balance,
 }
 
 #[near_bindgen]
@@ -84,10 +79,6 @@ impl Contract {
             total_current_unstaked_amount: old.total_current_unstaked_amount,
             total_current_unstaked_interest: 0,
 
-            acc_fixed_staked_amount: old.acc_fixed_staked_amount,
-            total_fixed_staked_amount: old.total_fixed_staked_amount,
-            total_fixed_unstaked_amount: old.total_fixed_unstaked_amount,
-            total_fixed_unstaked_interest: 0,
         };
     }
 }

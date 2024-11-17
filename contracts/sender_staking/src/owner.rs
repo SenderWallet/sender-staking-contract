@@ -24,11 +24,6 @@ impl Contract {
         self.current_switch = switch;
     }
 
-    pub fn set_fixed_switch(&mut self, switch: bool) {
-        self.assert_owner();
-        self.fixed_switch = switch;
-    }
-
     pub fn set_current_apr(&mut self, apr: u32) {
         self.assert_owner();
         require!(apr > 0, "apr must be positive");

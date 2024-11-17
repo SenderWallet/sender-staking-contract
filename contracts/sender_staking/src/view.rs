@@ -20,11 +20,6 @@ pub struct Metadata {
     pub total_current_unstaked_amount: U128,
     pub total_current_unstaked_interest: U128,
 
-    // fixed
-    pub acc_fixed_staked_amount: U128,
-    pub total_fixed_staked_amount: U128,
-    pub total_fixed_unstaked_amount: U128,
-    pub total_fixed_unstaked_interest: U128,
 }
 
 #[near_bindgen]
@@ -44,10 +39,6 @@ impl Contract {
             total_current_staked_amount: U128(self.total_current_staked_amount),
             total_current_unstaked_amount: U128(self.total_current_unstaked_amount),
             total_current_unstaked_interest: U128(self.total_current_unstaked_interest),
-            acc_fixed_staked_amount: U128(self.acc_fixed_staked_amount),
-            total_fixed_staked_amount: U128(self.total_fixed_staked_amount),
-            total_fixed_unstaked_amount: U128(self.total_fixed_unstaked_amount),
-            total_fixed_unstaked_interest: U128(self.total_fixed_unstaked_interest),
         }
     }
 
